@@ -13,6 +13,12 @@
         
         <div class="space-y-4">
             <div>
+                <label class="block text-sm text-gray-400 mb-1">Admin Password</label>
+                <input type="password" id="admin-pass" placeholder="Enter Password" 
+                    class="w-full bg-[#333] border-none p-3 rounded text-white focus:ring-2 focus:ring-red-600 outline-none">
+            </div>
+
+            <div>
                 <label class="block text-sm text-gray-400 mb-1">IMDb Movie Link</label>
                 <input type="text" id="imdb-url" placeholder="https://www.imdb.com/title/tt..." 
                     class="w-full bg-[#333] border-none p-3 rounded text-white focus:ring-2 focus:ring-red-600 outline-none">
@@ -39,10 +45,11 @@
 
     <script>
         /* --- CONFIGURATION START --- */
-        const GITHUB_TOKEN = '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'; // ghp_ diye shuru hoy
-        const REPO_OWNER = 'irevahi168-hash';              // Apnar GitHub Username
-        const REPO_NAME = 'Movies';             // Repository-r nam
-        const OMDB_API_KEY = '1045d300';               // OMDb API key
+        const GITHUB_TOKEN = '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'; 
+        const REPO_OWNER = 'irevahi168-hash';              
+        const REPO_NAME = 'Movies';             
+        const OMDB_API_KEY = '1045d300';               
+        const ADMIN_PASSWORD = 'kabir59'; // <--- Eikhane password change korte parben
         /* --- CONFIGURATION END --- */
 
         async function addMovie() {
@@ -50,9 +57,16 @@
             const status = document.getElementById('status');
             const imdbUrl = document.getElementById('imdb-url').value;
             const dlLink = document.getElementById('dl-link').value;
+            const enteredPass = document.getElementById('admin-pass').value;
+
+            // Password Check Logic
+            if(enteredPass !== ADMIN_PASSWORD) {
+                showStatus("Wrong Admin Password!", "bg-red-600");
+                return;
+            }
 
             if(!imdbUrl || !dlLink) {
-                showStatus("Please fill both fields!", "bg-yellow-600");
+                showStatus("Please fill all fields!", "bg-yellow-600");
                 return;
             }
 
@@ -61,16 +75,15 @@
                 btn.innerText = "Processing...";
                 showStatus("Fetching IMDb Data...", "bg-blue-600");
 
-                // 1. Extract IMDb ID
-                const imdbID = imdbUrl.match(/tt\d+/)[0];
+                const imdbIDMatch = imdbUrl.match(/tt\d+/);
+                if(!imdbIDMatch) throw new Error("Invalid IMDb URL!");
+                const imdbID = imdbIDMatch[0];
 
-                // 2. Fetch data from OMDb
                 const omdbRes = await fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=${OMDB_API_KEY}`);
                 const movie = await omdbRes.json();
 
                 if(movie.Response === "False") throw new Error("Movie not found!");
 
-                // 3. Get data.json from GitHub
                 showStatus("Connecting to GitHub...", "bg-indigo-600");
                 const fileUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/data.json`;
                 
@@ -82,7 +95,6 @@
                 const sha = fileInfo.sha;
                 const currentContent = JSON.parse(atob(fileInfo.content));
 
-                // 4. Create New Entry
                 const newMovie = {
                     title: movie.Title,
                     poster: movie.Poster,
@@ -91,7 +103,6 @@
                 };
                 currentContent.push(newMovie);
 
-                // 5. Update GitHub
                 const updateRes = await fetch(fileUrl, {
                     method: 'PUT',
                     headers: {
@@ -106,9 +117,10 @@
                 });
 
                 if(updateRes.ok) {
-                    showStatus(`Success! "${movie.Title}" has been posted.`, "bg-green-600");
+                    showStatus(`Success! "${movie.Title}" posted.`, "bg-green-600");
                     document.getElementById('imdb-url').value = "";
                     document.getElementById('dl-link').value = "";
+                    document.getElementById('admin-pass').value = "";
                 } else {
                     throw new Error("GitHub update failed!");
                 }
