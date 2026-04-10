@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Details - MovieFlix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #0a0a0a; color: white; }
+        .hero-bg { background-size: cover; background-position: center; filter: blur(30px); opacity: 0.3; position: absolute; inset: 0; z-index: -1; }
+    </style>
+</head>
+<body class="font-sans min-h-screen">
+
+    <div id="movie-details" class="p-6 md:p-20 flex flex-col items-center">
+        <div id="bg-image" class="hero-bg"></div>
+
+        <div class="max-w-5xl w-full flex flex-col md:flex-row gap-10">
+            <div class="w-full md:w-1/3 shadow-2xl">
+                <img id="movie-poster" src="" alt="Poster" class="rounded-lg w-full border border-gray-800">
+            </div>
+
+            <div class="w-full md:w-2/3 space-y-6">
+                <h1 id="movie-title" class="text-4xl md:text-6xl font-black text-red-600 uppercase">Loading...</h1>
+                
+                <div class="flex items-center gap-4 text-xl">
+                    <span class="bg-yellow-500 text-black px-3 py-1 rounded font-bold" id="movie-rating"></span>
+                    <span class="text-gray-400">IMDb Rating</span>
+                </div>
+
+                <p class="text-gray-300 text-lg leading-relaxed">
+                    Watch <span class="text-white font-bold" id="movie-name-p"></span> online in high quality. This movie is available for direct download. Enjoy the best cinematic experience with MovieFlix.
+                </p>
+
+                <div class="pt-6">
+                    <a id="download-btn" href="#" target="_blank" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-lg text-xl inline-block shadow-lg transition transform hover:scale-105">
+                        <i class="fa-solid fa-download mr-2"></i> DOWNLOAD NOW
+                    </a>
+                </div>
+                
+                <div class="mt-8">
+                    <a href="index.html" class="text-gray-500 hover:text-white transition underline">← Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchMovieDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const movieId = urlParams.get('id');
+
+            if (movieId === null) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const res = await fetch('data.json');
+                const movies = await res.json();
+                const movie = movies[movieId];
+
+                if (!movie) {
+                    document.body.innerHTML = "<h1 class='text-center mt-20 text-2xl'>Movie Not Found!</h1>";
+                    return;
+                }
+
+                // Update UI with movie data
+                document.title = movie.title + " - MovieFlix";
+                document.getElementById('movie-title').innerText = movie.title;
+                document.getElementById('movie-name-p').innerText = movie.title;
+                document.getElementById('movie-poster').src = movie.poster;
+                document.getElementById('bg-image').style.backgroundImage = `url('${movie.poster}')`;
+                document.getElementById('movie-rating').innerHTML = `<i class="fa-solid fa-star"></i> ${movie.rating}`;
+                document.getElementById('download-btn').href = movie.download;
+
+            } catch (err) {
+                console.error("Error loading movie details:", err);
+            }
+        }
+
+        fetchMovieDetails();
+    </script>
+</body>
+</html>
