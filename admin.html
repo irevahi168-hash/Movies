@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieFlix Admin - Add Movie</title>
+    <title>MovieFlix Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-[#141414] text-white font-sans min-h-screen flex items-center justify-center p-6">
+<body class="bg-[#141414] text-white min-h-screen flex items-center justify-center p-6">
 
     <div class="max-w-md w-full bg-[#1f1f1f] p-8 rounded-lg shadow-2xl border border-gray-800">
         <h2 class="text-3xl font-bold text-red-600 mb-6 text-center">Admin Panel</h2>
         
         <div class="space-y-4">
             <div>
-                <label class="block text-sm text-gray-400 mb-1">Admin Password</label>
-                <input type="password" id="admin-pass" placeholder="Enter Password" 
+                <label class="block text-sm text-gray-400 mb-1">GitHub Token (Keep it Secret)</label>
+                <input type="password" id="gh-token" placeholder="Paste your ghp_ token" 
                     class="w-full bg-[#333] border-none p-3 rounded text-white focus:ring-2 focus:ring-red-600 outline-none text-sm">
             </div>
 
             <div>
-                <label class="block text-sm text-gray-400 mb-1">IMDb Movie Link</label>
+                <label class="block text-sm text-gray-400 mb-1">IMDb Link</label>
                 <input type="text" id="imdb-url" placeholder="https://www.imdb.com/title/tt..." 
                     class="w-full bg-[#333] border-none p-3 rounded text-white focus:ring-2 focus:ring-red-600 outline-none text-sm">
             </div>
@@ -31,99 +31,58 @@
             </div>
 
             <button onclick="addMovie()" id="post-btn" 
-                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded transition duration-300 mt-4 shadow-lg text-sm">
+                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded transition mt-4 shadow-lg text-sm">
                 POST TO WEBSITE
             </button>
         </div>
 
-        <div id="status" class="mt-6 p-3 rounded hidden text-center text-xs md:text-sm"></div>
-        
-        <div class="mt-6 text-center text-gray-500 text-xs">
-            <a href="index.html" class="hover:text-white underline">← Back to Website</a>
-        </div>
+        <div id="status" class="mt-6 p-3 rounded hidden text-center text-sm"></div>
     </div>
 
     <script>
-        /* --- CONFIGURATION --- */
-        const GITHUB_TOKEN = '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'; 
         const REPO_OWNER = 'irevahi168-hash';              
         const REPO_NAME = 'Movies';             
         const OMDB_API_KEY = '1045d300';               
-        const ADMIN_PASSWORD = 'kabir59'; 
 
         async function addMovie() {
             const btn = document.getElementById('post-btn');
-            const status = document.getElementById('status');
+            const token = document.getElementById('gh-token').value;
             const imdbUrl = document.getElementById('imdb-url').value;
             const dlLink = document.getElementById('dl-link').value;
-            const enteredPass = document.getElementById('admin-pass').value;
 
-            if(enteredPass !== ADMIN_PASSWORD) {
-                showStatus("Wrong Password!", "bg-red-600");
-                return;
-            }
-
-            if(!imdbUrl || !dlLink) {
-                showStatus("Please fill all fields!", "bg-yellow-600");
+            if(!token || !imdbUrl || !dlLink) {
+                showStatus("Token, Link ebong Download link—shob ghor puron korun!", "bg-yellow-600");
                 return;
             }
 
             try {
                 btn.disabled = true;
                 btn.innerText = "Processing...";
-                showStatus("Fetching IMDb Data...", "bg-blue-600");
+                showStatus("Fetching Data...", "bg-blue-600");
 
-                // IMDb ID extract logic
                 const imdbMatch = imdbUrl.match(/tt\d+/);
-                if(!imdbMatch) throw new Error("Invalid IMDb URL!");
                 const imdbID = imdbMatch[0];
 
-                // Fetch from OMDb
                 const omdbRes = await fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=${OMDB_API_KEY}`);
                 const movie = await omdbRes.json();
-                if(movie.Response === "False") throw new Error("Movie not found!");
 
-                // GitHub connection
-                showStatus("Connecting to GitHub...", "bg-indigo-600");
+                showStatus("Syncing GitHub...", "bg-indigo-600");
                 const fileUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/data.json`;
                 
                 const getFile = await fetch(fileUrl, {
-                    headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Cache-Control': 'no-cache' }
+                    headers: { 'Authorization': `token ${token}`, 'Cache-Control': 'no-cache' }
                 });
                 
                 const fileInfo = await getFile.json();
-                if(!fileInfo.content) throw new Error("Could not find data.json!");
-                
                 const sha = fileInfo.sha;
+                const currentContent = JSON.parse(atob(fileInfo.content));
 
-                // Base64 decoding with Unicode support
-                let currentContent;
-                try {
-                    const decoded = decodeURIComponent(atob(fileInfo.content.replace(/\s/g, '')).split('').map(function(c) {
-                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                    }).join(''));
-                    currentContent = JSON.parse(decoded);
-                } catch (e) {
-                    console.warn("Decoding failed, resetting to []");
-                    currentContent = [];
-                }
-
-                // Push new data
-                const newData = {
-                    title: movie.Title,
-                    poster: movie.Poster,
-                    rating: movie.imdbRating,
-                    download: dlLink
-                };
+                const newData = { title: movie.Title, poster: movie.Poster, rating: movie.imdbRating, download: dlLink };
                 currentContent.push(newData);
 
-                // Update back to GitHub
                 const updateRes = await fetch(fileUrl, {
                     method: 'PUT',
-                    headers: { 
-                        'Authorization': `token ${GITHUB_TOKEN}`, 
-                        'Content-Type': 'application/json' 
-                    },
+                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message: `Added: ${movie.Title}`,
                         content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent, null, 2)))),
@@ -133,12 +92,8 @@
 
                 if(updateRes.ok) {
                     showStatus(`Success! "${movie.Title}" posted.`, "bg-green-600");
-                    document.getElementById('imdb-url').value = "";
-                    document.getElementById('dl-link').value = "";
-                    document.getElementById('admin-pass').value = "";
                 } else {
-                    const errData = await updateRes.json();
-                    throw new Error(errData.message || "Update failed!");
+                    throw new Error("GitHub Update Failed. Check Token!");
                 }
 
             } catch (err) {
@@ -153,7 +108,6 @@
             const status = document.getElementById('status');
             status.innerText = msg;
             status.className = `mt-6 p-3 rounded text-center text-sm block ${bgColor}`;
-            status.style.display = 'block';
         }
     </script>
 </body>
